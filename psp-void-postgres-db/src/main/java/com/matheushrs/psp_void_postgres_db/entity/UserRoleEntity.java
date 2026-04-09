@@ -24,8 +24,30 @@ public class UserRoleEntity {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+        name = "user_id",
+        insertable = false,
+        updatable = false,
+        foreignKey = @ForeignKey(name = "fk_user_roles_user")
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private UserEntity user;
+
     @Column(name = "role_id", nullable = false)
     private UUID roleId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+        name = "role_id",
+        insertable = false,
+        updatable = false,
+        foreignKey = @ForeignKey(name = "fk_user_roles_role")
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private RoleEntity role;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

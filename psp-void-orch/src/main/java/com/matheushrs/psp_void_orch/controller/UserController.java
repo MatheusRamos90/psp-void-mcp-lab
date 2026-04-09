@@ -24,16 +24,18 @@ public class UserController {
 
     private final CoreApiClient coreClient;
 
-    // ── Read — any authenticated user ──────────────────────────────────────
+    // ── Read — ADMIN only (user data is sensitive) ─────────────────────────
 
     @GetMapping
-    @Operation(summary = "List all users")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @Operation(summary = "List all users  [ADMIN]")
     public List<UserResponse> findAll() {
         return coreClient.findAllUsers();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get user by ID")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @Operation(summary = "Get user by ID  [ADMIN]")
     public UserResponse findById(@PathVariable UUID id) {
         return coreClient.findUserById(id);
     }
