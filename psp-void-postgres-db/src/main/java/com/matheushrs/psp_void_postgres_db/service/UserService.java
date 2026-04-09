@@ -22,7 +22,10 @@ public class UserService {
 
     public UserResponse create(UserRequest request) {
         if (request.password() == null || request.password().isBlank()) {
-            throw new IllegalArgumentException("Password is required");
+            throw new IllegalArgumentException("Password is required.");
+        }
+        if (repository.existsByEmailIgnoreCase(request.email())) {
+            throw new IllegalArgumentException("User with email '" + request.email() + "' already exists.");
         }
         var entity = UserEntity.builder()
                 .name(request.name())
@@ -46,6 +49,9 @@ public class UserService {
     public UserResponse update(UUID id, UserRequest request) {
         var entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + id));
+        if (repository.existsByEmailIgnoreCaseAndIdNot(request.email(), id)) {
+            throw new IllegalArgumentException("User with email '" + request.email() + "' already exists.");
+        }
         entity.setName(request.name());
         entity.setEmail(request.email());
         if (request.status() != null) entity.setStatus(request.status());

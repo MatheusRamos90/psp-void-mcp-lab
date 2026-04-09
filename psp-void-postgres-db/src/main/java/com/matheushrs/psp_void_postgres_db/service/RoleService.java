@@ -18,6 +18,9 @@ public class RoleService {
     private final RoleRepository repository;
 
     public RoleResponse create(RoleRequest request) {
+        if (repository.existsByNameIgnoreCase(request.name())) {
+            throw new IllegalArgumentException("Role with name '" + request.name() + "' already exists.");
+        }
         var entity = RoleEntity.builder().name(request.name()).build();
         return toResponse(repository.save(entity));
     }
@@ -35,6 +38,9 @@ public class RoleService {
     public RoleResponse update(UUID id, RoleRequest request) {
         var entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Role not found: " + id));
+        if (repository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
+            throw new IllegalArgumentException("Role with name '" + request.name() + "' already exists.");
+        }
         entity.setName(request.name());
         return toResponse(repository.save(entity));
     }

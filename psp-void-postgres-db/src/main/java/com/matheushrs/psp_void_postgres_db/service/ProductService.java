@@ -18,6 +18,9 @@ public class ProductService {
     private final ProductRepository repository;
 
     public ProductResponse create(ProductRequest request) {
+        if (repository.existsByNameIgnoreCase(request.name())) {
+            throw new IllegalArgumentException("Product with name '" + request.name() + "' already exists.");
+        }
         var entity = ProductEntity.builder()
                 .name(request.name())
                 .description(request.description())
@@ -39,6 +42,9 @@ public class ProductService {
     public ProductResponse update(UUID id, ProductRequest request) {
         var entity = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Product not found: " + id));
+        if (repository.existsByNameIgnoreCaseAndIdNot(request.name(), id)) {
+            throw new IllegalArgumentException("Product with name '" + request.name() + "' already exists.");
+        }
         entity.setName(request.name());
         entity.setDescription(request.description());
         if (request.status() != null) entity.setStatus(request.status());

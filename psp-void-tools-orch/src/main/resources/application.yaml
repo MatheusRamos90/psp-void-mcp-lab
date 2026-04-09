@@ -25,6 +25,8 @@ services:
 service-account:
   email: ${SERVICE_EMAIL}
   password: ${SERVICE_PASSWORD}
+  token-refresh-margin-seconds: 300   # Refresh when < 5 min remaining until expiry
+  token-check-interval-ms: 60000      # Verify expiry every 60 s
 
 mcp:
   api-key: ${MCP_API_KEY}
