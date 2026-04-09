@@ -478,6 +478,75 @@ O arquivo `.cursor/mcp.json` aponta para o MCP Server com a API Key:
 
 ---
 
+## Conectando AI Clients ao MCP Server
+
+O `psp-void-tools-orch` expõe o MCP Server via **SSE** em `http://localhost:8080/sse`. Todos os clientes precisam enviar o header `X-Api-Key` com o valor definido em `MCP_API_KEY` no `.env`.
+
+---
+
+### Cursor IDE
+
+O repositório já inclui `.cursor/mcp.json` configurado. Basta garantir que o valor da `X-Api-Key` bate com o seu `.env`:
+
+```json
+{
+  "mcpServers": {
+    "psp-void": {
+      "url": "http://localhost:8080/sse",
+      "headers": {
+        "X-Api-Key": "<valor de MCP_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+Após subir a stack, abra **Cursor → Settings → MCP** e confirme que `psp-void` aparece com status ativo e as tools listadas.
+
+---
+
+### Claude Desktop
+
+Claude Desktop não suporta SSE diretamente. É necessário o bridge **`mcp-remote`**:
+
+**1. Instale o mcp-remote**
+
+```bash
+npm install -g mcp-remote
+```
+
+**2. Localize o arquivo de configuração do Claude Desktop**
+
+| Sistema | Caminho |
+|---|---|
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+
+**3. Adicione a entrada do servidor MCP**
+
+```json
+{
+  "mcpServers": {
+    "psp-void": {
+      "command": "mcp-remote",
+      "args": [
+        "http://localhost:8080/sse",
+        "--header",
+        "X-Api-Key: <valor de MCP_API_KEY>"
+      ]
+    }
+  }
+}
+```
+
+**4. Reinicie o Claude Desktop**
+
+Na próxima abertura, o Claude detecta automaticamente as tools disponíveis. Um ícone de ferramentas no campo de mensagem confirma a conexão.
+
+> **Dica:** se o Claude pedir confirmação antes de executar uma tool, clique em **Allow** (ou **Allow for this chat**) para autorizar a chamada.
+
+---
+
 ## Executando o Projeto
 
 ### Pré-requisitos
