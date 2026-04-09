@@ -133,9 +133,17 @@ psp-void-mcp-lab/
 │       └── Dockerfile
 │
 ├── docs/
+│   ├── postman/
+│   │   ├── PSP-Void-API.postman_collection.json      # Collection completa
+│   │   └── PSP-Void-Local-Dev.postman_environment.json
 │   └── prompts/
 │       └── arch-system-prompt.md
 │
+├── .cursor/
+│   └── mcp.json                  # Configuração do MCP Server para o Cursor IDE
+├── .env.example                  # Template de variáveis de ambiente (sem segredos)
+├── .gitignore
+├── CHANGELOG.md
 ├── docker-compose.yml
 └── README.md
 ```
@@ -407,18 +415,66 @@ psp-void-tools-orch  →  psp-void-orch  →  psp-void-core
 | Tecnologia | Uso |
 |---|---|
 | Java 21 | Linguagem |
-| Spring Boot 4 | Framework base |
+| Spring Boot 4.0.3 | Framework base |
 | Spring Web MVC | Controllers REST |
 | Spring WebFlux (WebClient) | Chamadas HTTP entre serviços |
+| Spring Security 7 | Autenticação JWT + RBAC |
 | Spring Data JPA | Persistência relacional |
 | Spring Data Elasticsearch | Persistência de logs |
-| Spring AI (MCP Server/Client) | Infraestrutura MCP |
-| Flyway | Migrations de banco de dados |
+| Spring AI 2.0.0-M4 (MCP Server) | Infraestrutura MCP via SSE |
+| Flyway 11 | Migrations de banco de dados |
 | PostgreSQL 16 | Banco relacional |
-| Elasticsearch 8 | Banco de logs e busca |
+| Elasticsearch 9 | Banco de logs e busca |
 | springdoc-openapi | Documentação Swagger/OpenAPI |
+| jjwt | Geração e validação de JWT |
 | Lombok | Redução de boilerplate |
-| Docker + Docker Compose | Containerização |
+| Docker + Docker Compose v2 | Containerização e orquestração |
+
+---
+
+## Segurança
+
+### Camadas de proteção
+
+| Camada | Mecanismo |
+|---|---|
+| Cursor / AI Client → `psp-void-tools-orch` | Header `X-Api-Key` validado por `ApiKeyFilter` |
+| `psp-void-tools-orch` → `psp-void-orch` | Bearer JWT de service account (obtido no startup) |
+| Qualquer cliente → `psp-void-orch` | Bearer JWT via `POST /auth/login` |
+| Operações administrativas | Role `ADMIN` via `@PreAuthorize` |
+| Segredos de configuração | Variáveis de ambiente — nenhum valor sensível em YAML ou código |
+
+### Configuração de variáveis de ambiente
+
+Copie `.env.example` para `.env` e preencha os valores antes de subir a stack:
+
+```bash
+cp .env.example .env
+```
+
+| Variável | Descrição |
+|---|---|
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | Credenciais do PostgreSQL |
+| `JWT_SECRET` | Chave de assinatura JWT (mín. 32 chars) |
+| `JWT_EXPIRATION_MS` | TTL do token em ms (padrão: `86400000` = 24 h) |
+| `SERVICE_EMAIL` / `SERVICE_PASSWORD` | Conta de serviço usada pelo `psp-void-tools-orch` |
+| `SEED_ADMIN_PASSWORD` / `SEED_SERVICE_PASSWORD` | Senhas criadas no seed inicial do banco |
+| `MCP_API_KEY` | API Key exigida pelo `psp-void-tools-orch` |
+
+### Configuração do Cursor IDE (MCP)
+
+O arquivo `.cursor/mcp.json` aponta para o MCP Server com a API Key:
+
+```json
+{
+  "mcpServers": {
+    "psp-void": {
+      "url": "http://localhost:8080/sse",
+      "headers": { "X-Api-Key": "<valor de MCP_API_KEY>" }
+    }
+  }
+}
+```
 
 ---
 
@@ -427,6 +483,16 @@ psp-void-tools-orch  →  psp-void-orch  →  psp-void-core
 ### Pré-requisitos
 
 - Docker Desktop instalado e em execução
+
+### Configuração inicial
+
+```bash
+# 1. Copie o template de variáveis de ambiente
+cp .env.example .env
+
+# 2. Edite o .env com seus valores
+#    (o arquivo já vem com valores de exemplo para desenvolvimento local)
+```
 
 ### Subir toda a stack
 
@@ -482,16 +548,89 @@ Inicie os serviços na seguinte ordem:
 
 ---
 
+## Testando com Postman
+
+A pasta `docs/postman/` contém uma collection e um environment prontos para importar.
+
+### Arquivos
+
+| Arquivo | Descrição |
+|---|---|
+| `PSP-Void-API.postman_collection.json` | Collection completa com todos os endpoints |
+| `PSP-Void-Local-Dev.postman_environment.json` | Environment com variáveis pré-configuradas |
+
+### Como importar
+
+1. Abra o Postman → **Import**
+2. Selecione `PSP-Void-API.postman_collection.json`
+3. Repita para `PSP-Void-Local-Dev.postman_environment.json`
+4. Selecione o environment **PSP Void - Local Dev** no canto superior direito
+
+### Estrutura da collection
+
+```
+PSP Void API
+├── 🔐 psp-void-orch — Orchestration API          (Bearer JWT — herdado pela pasta)
+│   ├── Auth
+│   │   └── Login                                  ← execute primeiro
+│   ├── Products      (Create, List, Get, Update, Delete)
+│   ├── Prices        (Create, List, Get, Update, Delete)
+│   ├── Users         (List, Get, Create*, Update*, Delete*)    * ADMIN
+│   ├── Roles         (List, Get, Get by User, Create*, Update*, Delete*, Assign*, Revoke*)
+│   └── Logs          (List)
+│
+└── 🛠 psp-void-tools-orch — MCP Tools             (X-Api-Key — injetado por pre-request script)
+    └── Tools
+        ├── List Tools
+        ├── Reload Tools
+        ├── Execute Tool — get_products
+        ├── Execute Tool — post_products
+        ├── Execute Tool — get_products_id
+        ├── Execute Tool — get_logs
+        └── Execute Tool — [custom]     ← template genérico com {{tool_name}}
+```
+
+### Automações incluídas
+
+- **Login** → salva automaticamente `jwt_token` e `user_id` no environment
+- **Create Product** → salva `product_id`
+- **Create Price** → salva `price_id`
+- **Create User** → salva `created_user_id`
+- **Create Role** → salva `created_role_id`
+- **Pasta `psp-void-tools-orch`** → pre-request script injeta `X-Api-Key` em todos os requests
+
+### Variáveis do environment
+
+| Variável | Origem | Uso |
+|---|---|---|
+| `orch_url` | Manual | Base URL do `psp-void-orch` |
+| `tools_url` | Manual | Base URL do `psp-void-tools-orch` |
+| `admin_email` / `admin_password` | Manual | Credenciais para o Login |
+| `mcp_api_key` | Manual | API Key para o `psp-void-tools-orch` |
+| `jwt_token` | Auto (Login) | Bearer token para requests autenticados |
+| `user_id` | Auto (Login) | ID do usuário autenticado |
+| `product_id` | Auto (Create Product) | ID do produto criado |
+| `price_id` | Auto (Create Price) | ID do preço criado |
+| `created_user_id` | Auto (Create User) | ID do usuário criado |
+| `created_role_id` | Auto (Create Role) | ID da role criada |
+| `tool_name` | Manual | Nome da tool para o template genérico |
+
+> **Fluxo sugerido para testes completos:**
+> Auth/Login → Create Product → Create Price → Create User → Create Role → Assign Role → Logs
+
+---
+
 ## Futuras Melhorias
 
-- Autenticação com OAuth2 / JWT
-- RBAC aplicado nas Tools (restrição por role)
+- RBAC aplicado nas Tools (restrição por role dentro do MCP)
+- Renovação automática do JWT de service account antes da expiração
 - Observabilidade com OpenTelemetry + Jaeger
 - Integração com Kafka para eventos assíncronos
 - Rate limiting para Tools
 - Dashboard de logs com Kibana
 - Cache com Redis
 - Testes de integração com Testcontainers
+- Suporte ao transporte Streamable HTTP (MCP protocol `2025-11-25`)
 
 ---
 
