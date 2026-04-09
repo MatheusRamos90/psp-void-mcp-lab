@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: psp-void-tools-orch
+  ai:
+    mcp:
+      server:
+        name: psp-void-mcp-server
+        version: 1.0.0
+        type: ASYNC
+
+server:
+  port: ${SERVER_PORT:8080}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+services:
+  orch:
+    url: ${ORCH_SERVICE_URL:http://localhost:8081}
+    openapi-url: ${OPENAPI_SPEC_URL:http://localhost:8081/v3/api-docs}
+
+service-account:
+  email: ${SERVICE_EMAIL}
+  password: ${SERVICE_PASSWORD}
+
+mcp:
+  api-key: ${MCP_API_KEY}

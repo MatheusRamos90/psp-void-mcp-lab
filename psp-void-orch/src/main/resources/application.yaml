@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: psp-void-orch
+
+server:
+  port: ${SERVER_PORT:8081}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+services:
+  core:
+    url: ${CORE_SERVICE_URL:http://localhost:8082}
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}

@@ -1,0 +1,19 @@
+# Environment secrets — never commit
+.env
+
+# Maven
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+postgres_data/
+elasticsearch_data/

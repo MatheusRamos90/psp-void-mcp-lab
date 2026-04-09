@@ -1,0 +1,697 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "PSP Void API",
+    "description": "Collection completa do projeto psp-void-mcp-lab.\n\n**Passos para começar:**\n1. Importe também o environment `PSP-Void-Local-Dev.postman_environment.json`\n2. Selecione o environment `PSP Void - Local Dev`\n3. Execute **Auth / Login** — o token JWT é salvo automaticamente\n4. Explore os demais endpoints\n\n**Autenticação:**\n- `psp-void-orch` (porta 8081): Bearer JWT — gerado pelo Login\n- `psp-void-tools-orch` (porta 8080): Header `X-Api-Key`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔐 psp-void-orch — Orchestration API",
+      "description": "API gateway principal (porta 8081). Todos os endpoints protegidos exigem Bearer JWT.\nExecute Login primeiro para popular {{jwt_token}} no environment.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          { "key": "token", "value": "{{jwt_token}}", "type": "string" }
+        ]
+      },
+      "item": [
+
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Login",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const json = pm.response.json();",
+                      "    pm.environment.set('jwt_token', json.token);",
+                      "    pm.environment.set('user_id', json.userId);",
+                      "    console.log('✅ Token salvo. Usuário:', json.email, '| Roles:', json.roles.join(', '));",
+                      "    pm.test('Login bem-sucedido', () => pm.response.to.have.status(200));",
+                      "    pm.test('Token presente', () => pm.expect(json.token).to.be.a('string').and.not.empty);",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/auth/login",
+                  "host": ["{{orch_url}}"],
+                  "path": ["auth", "login"]
+                },
+                "description": "Autentica o usuário e retorna um JWT Bearer token.\n\nO script de teste salva automaticamente:\n- `jwt_token` — usado em todos os requests autenticados\n- `user_id` — ID do usuário autenticado"
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Products",
+          "item": [
+            {
+              "name": "Create Product",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const json = pm.response.json();",
+                      "    pm.environment.set('product_id', json.id);",
+                      "    console.log('✅ product_id salvo:', json.id);",
+                      "    pm.test('Produto criado', () => pm.response.to.have.status(201));",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Produto Exemplo\",\n  \"description\": \"Descrição do produto exemplo\",\n  \"status\": true\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/products",
+                  "host": ["{{orch_url}}"],
+                  "path": ["products"]
+                }
+              }
+            },
+            {
+              "name": "List Products",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/products",
+                  "host": ["{{orch_url}}"],
+                  "path": ["products"]
+                }
+              }
+            },
+            {
+              "name": "Get Product by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/products/{{product_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["products", "{{product_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Update Product",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Produto Atualizado\",\n  \"description\": \"Nova descrição\",\n  \"status\": true\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/products/{{product_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["products", "{{product_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Delete Product",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "url": {
+                  "raw": "{{orch_url}}/products/{{product_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["products", "{{product_id}}"]
+                }
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Prices",
+          "description": "Gerenciamento de preços de produtos. Use {{product_id}} gerado pelo Create Product.",
+          "item": [
+            {
+              "name": "Create Price",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const json = pm.response.json();",
+                      "    pm.environment.set('price_id', json.id);",
+                      "    console.log('✅ price_id salvo:', json.id);",
+                      "    pm.test('Preço criado', () => pm.response.to.have.status(201));",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"value\": 99.90,\n  \"discountPercent\": 10.00\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/prices",
+                  "host": ["{{orch_url}}"],
+                  "path": ["prices"]
+                }
+              }
+            },
+            {
+              "name": "List Prices",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/prices",
+                  "host": ["{{orch_url}}"],
+                  "path": ["prices"]
+                }
+              }
+            },
+            {
+              "name": "Get Price by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/prices/{{price_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["prices", "{{price_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Update Price",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"value\": 79.90,\n  \"discountPercent\": 0.00\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/prices/{{price_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["prices", "{{price_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Delete Price",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "url": {
+                  "raw": "{{orch_url}}/prices/{{price_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["prices", "{{price_id}}"]
+                }
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Users",
+          "description": "Gestão de usuários. Leitura: qualquer JWT válido. Escrita: requer role ADMIN.",
+          "item": [
+            {
+              "name": "List Users",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/users",
+                  "host": ["{{orch_url}}"],
+                  "path": ["users"]
+                }
+              }
+            },
+            {
+              "name": "Get User by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/users/{{user_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["users", "{{user_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Create User [ADMIN]",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const json = pm.response.json();",
+                      "    pm.environment.set('created_user_id', json.id);",
+                      "    console.log('✅ created_user_id salvo:', json.id);",
+                      "    pm.test('Usuário criado', () => pm.response.to.have.status(201));",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Novo Usuário\",\n  \"email\": \"novo@pspvoid.com\",\n  \"password\": \"senha-segura-123\",\n  \"status\": true\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/users",
+                  "host": ["{{orch_url}}"],
+                  "path": ["users"]
+                }
+              }
+            },
+            {
+              "name": "Update User [ADMIN]",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Usuário Atualizado\",\n  \"email\": \"novo@pspvoid.com\",\n  \"password\": \"nova-senha-123\",\n  \"status\": true\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/users/{{created_user_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["users", "{{created_user_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Delete User [ADMIN]",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "url": {
+                  "raw": "{{orch_url}}/users/{{created_user_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["users", "{{created_user_id}}"]
+                }
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Roles",
+          "description": "Gestão de roles. Leitura: qualquer JWT válido. Escrita: requer role ADMIN.",
+          "item": [
+            {
+              "name": "List Roles",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/roles",
+                  "host": ["{{orch_url}}"],
+                  "path": ["roles"]
+                }
+              }
+            },
+            {
+              "name": "Get Role by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/roles/{{role_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["roles", "{{role_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Get Roles by User",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/roles/by-user/{{user_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["roles", "by-user", "{{user_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Create Role [ADMIN]",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const json = pm.response.json();",
+                      "    pm.environment.set('created_role_id', json.id);",
+                      "    console.log('✅ created_role_id salvo:', json.id);",
+                      "    pm.test('Role criada', () => pm.response.to.have.status(201));",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"OPERATOR\"\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/roles",
+                  "host": ["{{orch_url}}"],
+                  "path": ["roles"]
+                }
+              }
+            },
+            {
+              "name": "Update Role [ADMIN]",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"OPERATOR_UPDATED\"\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/roles/{{created_role_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["roles", "{{created_role_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Delete Role [ADMIN]",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "url": {
+                  "raw": "{{orch_url}}/roles/{{created_role_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["roles", "{{created_role_id}}"]
+                }
+              }
+            },
+            {
+              "name": "Assign Role to User [ADMIN]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"{{created_user_id}}\",\n  \"roleId\": \"{{created_role_id}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{orch_url}}/roles/assign",
+                  "host": ["{{orch_url}}"],
+                  "path": ["roles", "assign"]
+                },
+                "description": "Requer que {{created_user_id}} e {{created_role_id}} estejam preenchidos (execute Create User e Create Role primeiro)."
+              }
+            },
+            {
+              "name": "Revoke Role from User [ADMIN]",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "url": {
+                  "raw": "{{orch_url}}/roles/revoke?userId={{created_user_id}}&roleId={{created_role_id}}",
+                  "host": ["{{orch_url}}"],
+                  "path": ["roles", "revoke"],
+                  "query": [
+                    { "key": "userId", "value": "{{created_user_id}}" },
+                    { "key": "roleId", "value": "{{created_role_id}}" }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Logs",
+          "item": [
+            {
+              "name": "List Audit Logs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{orch_url}}/logs",
+                  "host": ["{{orch_url}}"],
+                  "path": ["logs"]
+                },
+                "description": "Retorna o histórico de operações auditadas via Elasticsearch."
+              }
+            }
+          ]
+        }
+
+      ]
+    },
+
+    {
+      "name": "🛠 psp-void-tools-orch — MCP Tools",
+      "description": "Camada MCP/AI (porta 8080). Todos os endpoints exigem o header `X-Api-Key`.\nO script de pré-request injeta automaticamente a key do environment.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Injeta X-Api-Key em todos os requests desta pasta",
+              "const apiKey = pm.environment.get('mcp_api_key');",
+              "if (apiKey) {",
+              "    pm.request.headers.add({ key: 'X-Api-Key', value: apiKey });",
+              "} else {",
+              "    console.warn('⚠️  mcp_api_key não definida no environment!');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "auth": { "type": "noauth" },
+      "item": [
+        {
+          "name": "Tools",
+          "item": [
+            {
+              "name": "List Tools",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{tools_url}}/tools",
+                  "host": ["{{tools_url}}"],
+                  "path": ["tools"]
+                },
+                "description": "Retorna a lista de todas as ferramentas carregadas dinamicamente a partir do OpenAPI do psp-void-orch."
+              }
+            },
+            {
+              "name": "Reload Tools",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{tools_url}}/tools/reload",
+                  "host": ["{{tools_url}}"],
+                  "path": ["tools", "reload"]
+                },
+                "description": "Recarrega as tools a partir do spec OpenAPI do psp-void-orch. Útil após alterações nos endpoints."
+              }
+            },
+            {
+              "name": "Execute Tool — get_products",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{tools_url}}/tools/get_products/execute",
+                  "host": ["{{tools_url}}"],
+                  "path": ["tools", "get_products", "execute"]
+                },
+                "description": "Executa a tool de listagem de produtos via camada MCP.\n\nOs nomes seguem o padrão `{method}_{path}` em lowercase com underscores.\nExemplos: `get_products`, `post_products`, `get_products_id`, `get_logs`.\n\nConsulte **List Tools** para ver todos os nomes disponíveis."
+              }
+            },
+            {
+              "name": "Execute Tool — post_products",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Produto via MCP\",\n  \"description\": \"Criado pelo MCP tools layer\",\n  \"status\": true\n}"
+                },
+                "url": {
+                  "raw": "{{tools_url}}/tools/post_products/execute",
+                  "host": ["{{tools_url}}"],
+                  "path": ["tools", "post_products", "execute"]
+                }
+              }
+            },
+            {
+              "name": "Execute Tool — get_products_id",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"{{product_id}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{tools_url}}/tools/get_products_id/execute",
+                  "host": ["{{tools_url}}"],
+                  "path": ["tools", "get_products_id", "execute"]
+                }
+              }
+            },
+            {
+              "name": "Execute Tool — get_logs",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}"
+                },
+                "url": {
+                  "raw": "{{tools_url}}/tools/get_logs/execute",
+                  "host": ["{{tools_url}}"],
+                  "path": ["tools", "get_logs", "execute"]
+                }
+              }
+            },
+            {
+              "name": "Execute Tool — [custom]",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "X-Origin", "value": "POSTMAN" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"\": \"\"\n}"
+                },
+                "url": {
+                  "raw": "{{tools_url}}/tools/{{tool_name}}/execute",
+                  "host": ["{{tools_url}}"],
+                  "path": ["tools", "{{tool_name}}", "execute"]
+                },
+                "description": "Template genérico. Altere {{tool_name}} no environment (ou na URL) para o nome da tool desejada e preencha o body com os parâmetros necessários.\n\nTools disponíveis (25):\n- get_products, post_products, get_products_id, put_products_id, delete_products_id\n- get_prices, post_prices, get_prices_id, put_prices_id, delete_prices_id\n- get_users, post_users, get_users_id, put_users_id, delete_users_id\n- get_roles, post_roles, get_roles_id, put_roles_id, delete_roles_id\n- get_roles_by_user_id, post_roles_assign, delete_roles_revoke\n- post_auth_login\n- get_logs"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "variable": [
+    {
+      "key": "orch_url",
+      "value": "http://localhost:8081",
+      "description": "Base URL do psp-void-orch (Orchestration API)"
+    },
+    {
+      "key": "tools_url",
+      "value": "http://localhost:8080",
+      "description": "Base URL do psp-void-tools-orch (MCP Tools)"
+    }
+  ]
+}

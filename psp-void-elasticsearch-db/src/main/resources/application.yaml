@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: psp-void-elasticsearch-db
+  elasticsearch:
+    uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
+
+server:
+  port: ${SERVER_PORT:8084}

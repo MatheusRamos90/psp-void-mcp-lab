@@ -1,0 +1,166 @@
+services:
+
+  # ─── Infrastructure ──────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: psp-void-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - psp-void-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
+    container_name: psp-void-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - psp-void-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ─── Persistence Layer ────────────────────────────────────────────────────────
+
+  psp-void-postgres-db:
+    build:
+      context: ./psp-void-postgres-db
+      dockerfile: Dockerfile
+    container_name: psp-void-postgres-db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      JPA_DDL_AUTO: update
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+      SEED_SERVICE_PASSWORD: ${SEED_SERVICE_PASSWORD}
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - psp-void-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  psp-void-elasticsearch-db:
+    build:
+      context: ./psp-void-elasticsearch-db
+      dockerfile: Dockerfile
+    container_name: psp-void-elasticsearch-db
+    environment:
+      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
+    ports:
+      - "8084:8084"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - psp-void-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ─── Business Logic Layer ─────────────────────────────────────────────────────
+
+  psp-void-core:
+    build:
+      context: ./psp-void-core
+      dockerfile: Dockerfile
+    container_name: psp-void-core
+    environment:
+      POSTGRES_DB_URL: http://psp-void-postgres-db:8083
+      ELASTICSEARCH_DB_URL: http://psp-void-elasticsearch-db:8084
+    ports:
+      - "8082:8082"
+    depends_on:
+      psp-void-postgres-db:
+        condition: service_healthy
+      psp-void-elasticsearch-db:
+        condition: service_healthy
+    networks:
+      - psp-void-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ─── Orchestration Layer ──────────────────────────────────────────────────────
+
+  psp-void-orch:
+    build:
+      context: ./psp-void-orch
+      dockerfile: Dockerfile
+    container_name: psp-void-orch
+    environment:
+      CORE_SERVICE_URL: http://psp-void-core:8082
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+    ports:
+      - "8081:8081"
+    depends_on:
+      psp-void-core:
+        condition: service_healthy
+    networks:
+      - psp-void-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ─── AI Tools / MCP Layer ────────────────────────────────────────────────────
+
+  psp-void-tools-orch:
+    build:
+      context: ./psp-void-tools-orch
+      dockerfile: Dockerfile
+    container_name: psp-void-tools-orch
+    environment:
+      ORCH_SERVICE_URL: http://psp-void-orch:8081
+      OPENAPI_SPEC_URL: http://psp-void-orch:8081/v3/api-docs
+      SERVICE_EMAIL: ${SERVICE_EMAIL}
+      SERVICE_PASSWORD: ${SERVICE_PASSWORD}
+      MCP_API_KEY: ${MCP_API_KEY}
+    ports:
+      - "8080:8080"
+    depends_on:
+      psp-void-orch:
+        condition: service_healthy
+    networks:
+      - psp-void-network
+
+volumes:
+  postgres_data:
+  elasticsearch_data:
+
+networks:
+  psp-void-network:
+    driver: bridge

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "psp-void": {
+      "url": "http://localhost:8080/sse",
+      "headers": {
+        "X-Api-Key": "psp-void-mcp-dev-key-2026"
+      }
+    }
+  }
+}

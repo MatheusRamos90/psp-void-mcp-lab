@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: psp-void-core
+
+server:
+  port: ${SERVER_PORT:8082}
+
+services:
+  postgres-db:
+    url: ${POSTGRES_DB_URL:http://localhost:8083}
+  elasticsearch-db:
+    url: ${ELASTICSEARCH_DB_URL:http://localhost:8084}

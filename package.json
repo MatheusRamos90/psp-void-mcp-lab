@@ -1,0 +1,16 @@
+{
+  "name": "psp-void-mcp-lab",
+  "version": "1.0.0",
+  "description": "**PSP (Project Store Planet) Void — MCP Lab**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
