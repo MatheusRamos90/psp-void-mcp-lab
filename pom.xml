@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.matheushrs</groupId>
+	<artifactId>psp-void-mcp-lab</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<name>psp-void-mcp-lab</name>
+	<description>Projeto agregador Maven para os módulos PSP Void</description>
+
+	<modules>
+		<module>psp-void-core</module>
+		<module>psp-void-elasticsearch-db</module>
+		<module>psp-void-postgres-db</module>
+		<module>psp-void-orch</module>
+		<module>psp-void-tools-orch</module>
+	</modules>
+</project>

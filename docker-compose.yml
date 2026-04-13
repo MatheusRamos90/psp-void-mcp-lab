@@ -5,6 +5,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: psp-void-postgres
+    restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -24,6 +25,7 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
     container_name: psp-void-elasticsearch
+    restart: always
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -47,6 +49,7 @@ services:
       context: ./psp-void-postgres-db
       dockerfile: Dockerfile
     container_name: psp-void-postgres-db
+    restart: always
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
@@ -72,6 +75,7 @@ services:
       context: ./psp-void-elasticsearch-db
       dockerfile: Dockerfile
     container_name: psp-void-elasticsearch-db
+    restart: always
     environment:
       SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
     ports:
@@ -94,6 +98,7 @@ services:
       context: ./psp-void-core
       dockerfile: Dockerfile
     container_name: psp-void-core
+    restart: always
     environment:
       POSTGRES_DB_URL: http://psp-void-postgres-db:8083
       ELASTICSEARCH_DB_URL: http://psp-void-elasticsearch-db:8084
@@ -119,6 +124,7 @@ services:
       context: ./psp-void-orch
       dockerfile: Dockerfile
     container_name: psp-void-orch
+    restart: always
     environment:
       CORE_SERVICE_URL: http://psp-void-core:8082
       JWT_SECRET: ${JWT_SECRET}
@@ -143,6 +149,7 @@ services:
       context: ./psp-void-tools-orch
       dockerfile: Dockerfile
     container_name: psp-void-tools-orch
+    restart: always
     environment:
       ORCH_SERVICE_URL: http://psp-void-orch:8081
       OPENAPI_SPEC_URL: http://psp-void-orch:8081/v3/api-docs
